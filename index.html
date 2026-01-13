@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تحدي الميكروبات - نسخة الموبايل 🇮🇶</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --success: #00b894;
+            --danger: #d63031;
+            --yellow: #f1c40f;
+            --dark: #2d3436;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        #quiz-card {
+            background: white;
+            width: 100%;
+            max-width: 450px;
+            padding: 15px;
+            border-radius: 20px;
+            border: 3px solid var(--dark);
+            box-shadow: 6px 6px 0px var(--dark);
+        }
+
+        /* تصغير منطقة التفاعل */
+        .chat-section {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 15px;
+            margin-bottom: 12px;
+            border: 2px solid var(--dark);
+            display: flex;
+            align-items: center;
+            min-height: 60px;
+        }
+
+        #avatar {
+            font-size: 2.5rem;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+
+        .bubble-text {
+            font-weight: 700;
+            color: var(--dark);
+            font-size: 0.95rem;
+            line-height: 1.2;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            background: var(--dark);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        /* تصغير مربع السؤال */
+        .q-text {
+            background: #fffbe6;
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid var(--dark);
+            text-align: left;
+            direction: ltr;
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        .options-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        /* تصغير أزرار الخيارات */
+        .opt {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 2px solid var(--dark);
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: left;
+            direction: ltr;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .letter {
+            background: var(--dark);
+            color: white;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            margin-right: 10px;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .correct { background: var(--success) !important; color: white; border-color: #01906e !important; }
+        .wrong { background: var(--danger) !important; color: white; animation: shake 0.4s; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        #btn-next {
+            display: none;
+            width: 100%;
+            margin-top: 15px;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: 2px solid var(--dark);
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            box-shadow: 0 4px 0px var(--dark);
+        }
+
+        #result-box { display: none; text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="quiz-card">
+    <div id="quiz-ui">
+        <div class="chat-section">
+            <div id="avatar">🧔🏻</div>
+            <div class="bubble-text" id="talk">هلا دكتور.. بلش الاختبار، شد حيلك!</div>
+        </div>
+
+        <div class="stats-bar">
+            <span id="progress">1 / 59</span>
+            <span id="live-score">الصح: 0</span>
+        </div>
+
+        <div class="q-text" id="q-content"></div>
+        <div class="options-list" id="opt-container"></div>
+        <button id="btn-next" onclick="nextQuestion()">التالي ➡️</button>
+    </div>
+
+    <div id="result-box">
+        <h1 id="res-emoji" style="font-size:4rem;"></h1>
+        <h2 id="res-msg"></h2>
+        <div style="font-size: 2rem; margin: 15px 0; font-weight: 900;"><span id="final-score"></span> / 59</div>
+        <button onclick="location.reload()" style="padding:12px 25px; border-radius:10px; background:var(--yellow); border:2px solid var(--dark); font-weight:bold;">إعادة المحاولة 🔄</button>
+    </div>
+</div>
+
+<script>
+    // نظام عدم تكرار التعليقات
+    let lastComment = "";
+    const getUniqueComment = (arr) => {
+        let newComment;
+        do {
+            newComment = arr[Math.floor(Math.random() * arr.length)];
+        } while (newComment === lastComment);
+        lastComment = newComment;
+        return newComment;
+    };
+
+    const iraqiCorrect = [
+        "عاشت ايدك دكتور.. وحش!", "كفووو.. دماغك فول", "عفية بالسبع.. استمر", "عدت سلامات.. بطل",
+        "وحش الأحياء.. ذيب امعط!", "جا هو منو غيرك يحلهه؟ ابوراس", "دماغك شغال ألمظ", "أروحلك فدوة لهالعقل",
+        ". حركت المادة حرك!", " تستاهل هوسة بالكلية هيبة زماطك يا ماو!" " صيتاوي يا محله صيت ", " عملاققققق " ,
+    ];
+
+    const iraqiWrong = [
+        "يا معود شجاك؟ ركز!", "أفااا.. غدر بيك الميكروب", "شسويت بينا؟ ركز عيني", "ولك ركز.. لا تخليني أنزع النعال!",
+        "هاي عود أنت دكتور؟ روح بيع لبلبي", "خرب حظي.. الجواب جان كبالك ", "يا كاع انشكي وبلعيني!", "ركز يا بعد طوايفي",
+        "لا تخليني أحجي.. ركز!", "تعيش وتأكل غيرها يا وردة" " لا تكمل روح نام ", " نسكت وسكته اوله " ,
+    ];
+
+    const questions = [
+        { q: "Phase-contrast microscope, making it possible to see ...........", options: ["living cells with staining them", "killed cells without staining them", "living cells without staining them", "killed cells with staining them"], correct: 2 },
+        { q: "........... preserves overall morphology but not structures within cells:", options: ["Chemical fixation", "Biological fixation", "Heat fixation", "Both A+B"], correct: 2 },
+        { q: "India ink or nigrosin classified as...........", options: ["Simple stain", "Negative staining", "Differential stain", "AFB stain"], correct: 1 },
+        { q: "H2O + O2 released from H2O2 by action of:", options: ["Catalase", "Oxidase", "Urease", "Indol test"], correct: 0 },
+        { q: "Presence of Urease can be determined by:", options: ["Stuart’s broth", "Christensen’s agar", "Blood agar", "Both A and B"], correct: 3 },
+        { q: "Separates Enterobacteriaceae and Pseudomonas spp:", options: ["Enrichment", "Selective", "O-F medium", "Enriched"], correct: 2 },
+        { q: "Dark-field useful for observing:", options: ["Neisseria", "Mycobacterium", "Treponema pallidum", "Corynebacterium"], correct: 2 },
+        { q: "Non-traditional identification methods include:", options: ["Molecular", "Saliva based", "Chromogeneic", "All of above"], correct: 3 },
+        { q: "Chemical fixation used with mercuric chloride:", options: ["ethanol", "acetic acid", "formaldehyde", "All of above"], correct: 3 },
+        { q: "Impregnation methods thicken bacterial cells using:", options: ["sodium chloride", "potassium chloride", "silver salts", "All of above"], correct: 2 },
+        { q: "Net result of catalase test is:", options: ["H2O + CO2", "O2 + CO", "H2O + O2", "O2 only"], correct: 2 },
+        { q: "Detects M. tuberculosis using UV light:", options: ["Dark-field", "Phase-contrast", "Electron", "Fluorescence microscopy"], correct: 3 },
+        { q: "Susceptibility testing performed by disk diffusion or:", options: ["MIC", "Catalase", "Oxidase", "Indol"], correct: 0 },
+        { q: "Sensitivity tests include Kirby-Bauer and:", options: ["MIC", "Automated systems", "E-test", "All of above"], correct: 3 },
+        { q: "The MIC is the lowest:", options: ["Antibody conc.", "Dose causing disease", "Toxin conc.", "Antibiotic conc. inhibiting growth"], correct: 3 },
+        { q: "Antibiotic mechanisms EXCEPT:", options: ["Inhibit growth factors in medium", "Alter membranes", "Inhibit Proteins", "Inhibit Cell Wall"], correct: 0 },
+        { q: "Cannot be used to determine MIC:", options: ["E-test", "Microbroth", "Kirby-Bauer disk diffusion", "Macrobroth"], correct: 2 },
+        { q: "Antibiotics are naturally produced by:", options: ["Bacteria/Parasites", "Parasites/Viruses", "Viruses/Fungi", "Bacteria/Fungi"], correct: 3 },
+        { q: "Antimicrobial agents include:", options: ["Antiseptics", "Antibiotics", "Preservatives", "All of above"], correct: 3 },
+        { q: "Antimicrobial agents are ............ therapeutic agents:", options: ["Poison", "Toxic", "Non-toxic", "None"], correct: 2 },
+        { q: "Lowest concentration that kills 100% of bacteria:", options: ["MIC", "MBC", "MAC", "MPC"], correct: 1 },
+        { q: "Tubes containing serial dilutions method:", options: ["Agar dilution", "Tube dilution", "Disk diffusion", "All"], correct: 1 },
+        { q: "Unpredictable sensitivity patterns require testing in:", options: ["Gram-negative bacilli", "Enterococci", "Staphylococci", "All of these"], correct: 3 },
+        { q: "Folate synthesis inhibitors:", options: ["Ansamycines", "Sulfonamides", "Lipopeptides", "Rifampicin"], correct: 1 },
+        { q: "RNA synthesis inhibitors:", options: ["Ansamycines", "Sulfonamides", "Lipopeptides", "Tetracyclines"], correct: 0 },
+        { q: "CSF functions include:", options: ["Shock absorber", "Pressure regulation", "Hunger", "Both A and B"], correct: 3 },
+        { q: "Neonatal meningitis associations EXCEPT:", options: ["E. coli", "S. agalactiae", "N. meningitides", "None"], correct: 3 },
+        { q: "Watery fluid in ventricles and spinal cord:", options: ["Blood", "Cerebrospinal", "Saliva", "Pus"], correct: 1 },
+        { q: "Brain abscesses mixed infections include:", options: ["S. aureus", "Bacteroides", "Fusobacterium", "All of above"], correct: 3 },
+        { q: "Common meningitis in children 6m-5y:", options: ["H. influenzae", "E. coli", "S. pneumoniae", "Staph. aureus"], correct: 0 },
+        { q: "Gram-negative coffee-bean diplococci:", options: ["N. meningitides", "H. influenzae", "P. aeruginosa", "T. pallidum"], correct: 0 },
+        { q: "Neisseria meningitides infects:", options: ["All age groups", "Adults", "Children", "Infants"], correct: 0 },
+        { q: "Requires both hemin (X) and NAD (V):", options: ["N. meningitides", "N. gonorrhoeae", "H. influenzae", "Borrelia"], correct: 2 },
+        { q: "Pyogenic brain parenchyma infection:", options: ["Cellulitis", "Cerebritis", "Meningitis", "Arthritis"], correct: 1 },
+        { q: "Mixed brain abscess infections include:", options: ["Aerobes", "Anaerobes", "Both", "None"], correct: 2 },
+        { q: "Best clinical specimen for meningitis:", options: ["Blood", "Urine", "CSF", "Stool"], correct: 2 },
+        { q: "Cytospin recommended for CSF because:", options: ["More effective", "Less effective", "Equal", "None"], correct: 0 },
+        { q: "Common causes of meningitis include:", options: ["S. epidermidis", "S. agalactiae", "Listeria & Neisseria", "All of above"], correct: 3 },
+        { q: "Immediate decision in CSF infection based on:", options: ["Cell count", "Glucose/Protein", "Microorganisms", "All of above"], correct: 3 },
+        { q: "S. agalactiae meningitis age group:", options: ["Neonates mainly", "All ages", "Neonates to 3 months", "Elderly"], correct: 2 },
+        { q: "L. monocytogenes infects:", options: ["Neonates only", "All ages", "Immunocompromised/Elderly", "Both B and C"], correct: 3 },
+        { q: "N. meningitidis optimal growth:", options: ["40°C", "35-37°C + 5% CO2", "30°C", "37°C NO CO2"], correct: 1 },
+        { q: "N. meningitidis nuclei leukocytes:", options: ["dimorphic", "monomorphic", "polymorphic", "None"], correct: 2 },
+        { q: "N. meningitidis biochemical utilization:", options: ["Glucose/Maltose", "Lactose", "Sucrose", "None"], correct: 0 },
+        { q: "All about N. meningitidis true EXCEPT:", options: ["Anaerobic", "Gram-negative", "Diplococci", "Oxidase (+)" ], correct: 0 },
+        { q: "H. influenzae growth requirements:", options: ["X factor", "V factor", "Both X and V", "None"], correct: 2 },
+        { q: "H. influenzae culture smell:", options: ["Indole smell", "Lactic acid", "CO2", "Acetic acid"], correct: 0 },
+        { q: "M. tuberculosis risk factor:", options: ["Crowded conditions", "Older age/Immune compromise", "Exposure", "All of above"], correct: 3 },
+        { q: "N. meningitidis risk factor:", options: ["Crowded conditions", "HIV", "Neonates", "Exposure"], correct: 0 },
+        { q: "S. pneumoniae colonies zone:", options: ["Beta", "Alpha (Green)", "Gamma", "Pitting"], correct: 1 },
+        { q: "S. pneumoniae confirmatory test:", options: ["Catalase", "Optochin", "Bile solubility", "Urease"], correct: 2 },
+        { q: "Neonatal meningitis caused by:", options: ["Salmonella", "Shigella", "E. coli", "Neisseria"], correct: 2 },
+        { q: "Pleomorphic gram-negative bacilli:", options: ["Treponema", "Haemophilus influenzae", "Pseudomonas", "Neisseria"], correct: 1 },
+        { q: "Medium for H. influenzae:", options: ["Blood agar", "Chocolate agar", "MacConkey", "MSA"], correct: 1 },
+        { q: "CSF functions:", options: ["Intracranial pressure", "Shock absorber", "Regulation", "All of above"], correct: 3 },
+        { q: "H. influenzae is caught using:", options: ["Oxidase test", "Catalase", "Urease", "Indole"], correct: 0 },
+        { q: "N. meningitidis is a:", options: ["Gram-negative diplococci", "Gram-positive", "Bacilli", "Spirochete"], correct: 0 },
+        { q: "Result of Catalase test:", options: ["H2O and O2", "CO2", "H2", "Pus"], correct: 0 },
+        { q: "Standard meningitis media:", options: ["Blood and Chocolate", "Blood and MacConkey", "MSA", "Endo agar"], correct: 0 }
+    ];
+
+    let current = 0;
+    let score = 0;
+    const alphabet = ["A", "B", "C", "D"];
+
+    function loadQuestion() {
+        const q = questions[current];
+        document.getElementById("q-content").innerText = q.q;
+        const container = document.getElementById("opt-container");
+        container.innerHTML = "";
+        
+        q.options.forEach((opt, i) => {
+            const div = document.createElement("div");
+            div.className = "opt";
+            div.innerHTML = `<span class="letter">${alphabet[i]}</span> ${opt}`;
+            div.onclick = () => check(i, div);
+            container.appendChild(div);
+        });
+
+        document.getElementById("progress").innerText = `${current + 1} / ${questions.length}`;
+        document.getElementById("btn-next").style.display = "none";
+        document.getElementById("avatar").innerText = "🧔🏻";
+    }
+
+    function check(idx, el) {
+        const q = questions[current];
+        const opts = document.getElementsByClassName("opt");
+        const talk = document.getElementById("talk");
+        const avatar = document.getElementById("avatar");
+
+        if(idx === q.correct) {
+            el.classList.add("correct");
+            score++;
+            talk.innerText = getUniqueComment(iraqiCorrect);
+            avatar.innerText = "🤩";
+        } else {
+            el.classList.add("wrong");
+            opts[q.correct].classList.add("correct");
+            talk.innerText = getUniqueComment(iraqiWrong);
+            avatar.innerText = "🤦‍♂️";
+        }
+
+        for(let o of opts) o.style.pointerEvents = "none";
+        document.getElementById("live-score").innerText = `صح: ${score}`;
+        document.getElementById("btn-next").style.display = "block";
+    }
+
+    function nextQuestion() {
+        current++;
+        if(current < questions.length) {
+            loadQuestion();
+            document.getElementById("talk").innerText = "يلا عيني.. السؤال الوراه!";
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById("quiz-ui").style.display = "none";
+        document.getElementById("result-box").style.display = "block";
+        document.getElementById("final-score").innerText = score;
+        document.getElementById("res-emoji").innerText = score > 30 ? "🏆" : "🤕";
+        document.getElementById("res-msg").innerText = score > 30 ? "كفو دكتور! بيضتها للوجه" : "يا معود شسويت؟ محتاج قراية!";
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
